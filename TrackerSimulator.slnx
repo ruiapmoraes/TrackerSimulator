@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/TrackerSimulator.Contracts/TrackerSimulator.Contracts.csproj" />
+  <Project Path="src/TrackerSimulator.Web/TrackerSimulator.Web.csproj" />
+  <Project Path="src/TrackerSimulator.Worker/TrackerSimulator.Worker.csproj" />
+  <Project Path="tests/TrackerSimulator.Tests/TrackerSimulator.Tests.csproj" />
+</Solution>

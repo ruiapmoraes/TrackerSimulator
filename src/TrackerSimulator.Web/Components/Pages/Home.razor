@@ -1,0 +1,140 @@
+@page "/"
+@rendermode InteractiveServer
+@implements IDisposable
+@inject ITelemetryStore TelemetryStore
+@inject IJSRuntime JS
+
+<PageTitle>TrackerSimulator - Tempo Real</PageTitle>
+
+<div class="dashboard">
+    <header class="topbar">
+        <div class="brand">
+            <span class="pulse-dot"></span>
+            <div>
+                <h1>TrackerSimulator</h1>
+                <p>Telemetria em tempo real via SignalR + Leaflet</p>
+            </div>
+        </div>
+
+        <div class="kpis">
+            <div class="kpi-card">
+                <span class="kpi-label">Dispositivos</span>
+                <strong class="kpi-value">@_devices.Count</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Em movimento</span>
+                <strong class="kpi-value">@_devices.Count(d => d.Latest.IgnitionOn && d.Latest.SpeedKmh > 0)</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Velocidade média</span>
+                <strong class="kpi-value">@AverageSpeed.ToString("F1") km/h</strong>
+            </div>
+        </div>
+    </header>
+
+    <main class="workspace">
+        <section class="map-panel">
+            <div id="tracker-map"></div>
+        </section>
+
+        <aside class="fleet-panel">
+            <div class="fleet-header">
+                <h2>Frota ativa</h2>
+                <span class="hint">Clique para centralizar</span>
+            </div>
+
+            @if (_devices.Count == 0)
+            {
+                <div class="empty-state">
+                    <p>Aguardando pacotes em <code>POST /api/telemetry</code>...</p>
+                    <p class="hint">Inicie o <code>TrackerSimulator.Worker</code> para ver os rastreadores no mapa.</p>
+                </div>
+            }
+            else
+            {
+                <div class="device-list">
+                    @foreach (var device in _devices)
+                    {
+                        var t = device.Latest;
+                        var statusClass = !t.IgnitionOn ? "off" : (t.SpeedKmh > 0 ? "moving" : "idle");
+
+                        <button type="button"
+                                class="device-card @(_selectedDeviceId == t.DeviceId ? "selected" : "")"
+                                @onclick="() => FocusDeviceAsync(t.DeviceId)">
+                            <div class="device-row">
+                                <span class="device-id">@t.DeviceId</span>
+                                <span class="badge @statusClass">
+                                    @(!t.IgnitionOn ? "Desligado" : (t.SpeedKmh > 0 ? "Em rota" : "Parado"))
+                                </span>
+                            </div>
+                            <div class="device-metrics">
+                                <span>@t.SpeedKmh.ToString("F1") km/h</span>
+                                <span>Bat: @t.BatteryPercent%</span>
+                                <span>Seq #@t.SequenceNumber</span>
+                            </div>
+                            <div class="device-coords">
+                                @t.Latitude.ToString("F5"), @t.Longitude.ToString("F5") · @t.OdometerKm.ToString("F1") km
+                            </div>
+                        </button>
+                    }
+                </div>
+            }
+        </aside>
+    </main>
+</div>
+
+@code {
+    private IReadOnlyList<DeviceTelemetryState> _devices = [];
+    private string? _selectedDeviceId;
+    private bool _mapInitialized;
+
+    private double AverageSpeed =>
+        _devices.Count == 0 ? 0 : _devices.Average(d => d.Latest.SpeedKmh);
+
+    protected override void OnInitialized()
+    {
+        _devices = TelemetryStore.GetSnapshot();
+        TelemetryStore.TelemetryUpdated += HandleTelemetryUpdated;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_mapInitialized)
+        {
+            _mapInitialized = true;
+            try
+            {
+                await JS.InvokeVoidAsync("telemetryMap.init", "tracker-map");
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+
+    private void HandleTelemetryUpdated(DeviceTelemetryState state)
+    {
+        _ = InvokeAsync(() =>
+        {
+            _devices = TelemetryStore.GetSnapshot();
+            StateHasChanged();
+        });
+    }
+
+    private async Task FocusDeviceAsync(string deviceId)
+    {
+        _selectedDeviceId = deviceId;
+        try
+        {
+            await JS.InvokeVoidAsync("telemetryMap.focusDevice", deviceId);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        TelemetryStore.TelemetryUpdated -= HandleTelemetryUpdated;
+    }
+}
