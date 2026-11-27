@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Itens de Solução/">
+    <File Path="docs/devto-article.md" />
     <File Path="README.md" />
   </Folder>
   <Project Path="src/TrackerSimulator.Contracts/TrackerSimulator.Contracts.csproj" />

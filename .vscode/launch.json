@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Web (Backend + Blazor)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/TrackerSimulator.Web/bin/Debug/net11.0/TrackerSimulator.Web.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/TrackerSimulator.Web",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5100"
+      }
+    },
+    {
+      "name": "Debug Worker (Simulador)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/TrackerSimulator.Worker/bin/Debug/net11.0/TrackerSimulator.Worker.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/TrackerSimulator.Worker",
+      "stopAtEntry": false,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Web + Worker",
+      "configurations": [
+        "Debug Web (Backend + Blazor)",
+        "Debug Worker (Simulador)"
+      ],
+      "stopAll": true
+    }
+  ]
+}
